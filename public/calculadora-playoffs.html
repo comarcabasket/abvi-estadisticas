@@ -355,7 +355,8 @@
       { id: 'san', name: 'SAN MARTIN', short: 'San Martín', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/San-Martin.png' }
     ];
     const teamById = Object.fromEntries(TEAMS.map(t => [t.id, t]));
-    const STORE = 'calculadora_basquet_8_equipos_v1';
+    const STORE = 'comarcabasket_publicada_2026_11_05_resultados_v1';
+    const EMBEDDED_RESULTS = {"version":2,"matches":[{"id":"f1p1","round":1,"home":"jor","away":"ate","a":"62","b":"87"},{"id":"f1p2","round":1,"home":"sol","away":"pat","a":"86","b":"63"},{"id":"f1p3","round":1,"home":"san","away":"dv","a":"63","b":"96"},{"id":"f1p4","round":1,"home":"fer","away":"vil","a":"75","b":"64"},{"id":"f2p1","round":2,"home":"ate","away":"san","a":"115","b":"67"},{"id":"f2p2","round":2,"home":"vil","away":"jor","a":"67","b":"87"},{"id":"f2p3","round":2,"home":"dv","away":"sol","a":"87","b":"82"},{"id":"f2p4","round":2,"home":"pat","away":"fer","a":"66","b":"52"},{"id":"f3p1","round":3,"home":"jor","away":"pat","a":"70","b":"56"},{"id":"f3p2","round":3,"home":"dv","away":"ate","a":"86","b":"74"},{"id":"f3p3","round":3,"home":"sol","away":"fer","a":"100","b":"47"},{"id":"f3p4","round":3,"home":"san","away":"vil","a":"61","b":"84"},{"id":"f4p1","round":4,"home":"ate","away":"sol","a":"104","b":"88"},{"id":"f4p2","round":4,"home":"vil","away":"dv","a":"76","b":"82"},{"id":"f4p3","round":4,"home":"pat","away":"san","a":"20","b":"0"},{"id":"f4p4","round":4,"home":"fer","away":"jor","a":"59","b":"76"},{"id":"f5p1","round":5,"home":"sol","away":"jor","a":"93","b":"73"},{"id":"f5p2","round":5,"home":"san","away":"fer","a":"66","b":"63"},{"id":"f5p3","round":5,"home":"dv","away":"pat","a":"71","b":"63"},{"id":"f5p4","round":5,"home":"ate","away":"vil","a":"94","b":"65"},{"id":"f6p1","round":6,"home":"pat","away":"ate","a":"56","b":"87"},{"id":"f6p2","round":6,"home":"jor","away":"san","a":"99","b":"64"},{"id":"f6p3","round":6,"home":"sol","away":"vil","a":"116","b":"79"},{"id":"f6p4","round":6,"home":"fer","away":"dv","a":"50","b":"88"},{"id":"f7p1","round":7,"home":"ate","away":"fer","a":"88","b":"66"},{"id":"f7p2","round":7,"home":"dv","away":"jor","a":"62","b":"67"},{"id":"f7p3","round":7,"home":"vil","away":"pat","a":"58","b":"45"},{"id":"f7p4","round":7,"home":"san","away":"sol","a":"65","b":"103"}],"playoffs":{}};
 
     // Fixture inicial de ejemplo: 7 fechas, 4 partidos por fecha, todos contra todos una vez.
     function generateSchedule() {
@@ -372,7 +373,7 @@
       return fixture;
     }
     const DEFAULT = generateSchedule();
-    let matches = DEFAULT.map(m => ({ ...m }));
+    let matches = EMBEDDED_RESULTS.matches.map(m => ({ ...m }));
     let currentRound = 1;
     let editing = false;
     let storageAvailable = true;
