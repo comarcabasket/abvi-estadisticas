@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>Comarca Basket · Calculadora y playoffs interactivos</title>
+  <style>
+    :root {
+      --purple: #30002b;
+      --purple-2: #511049;
+      --accent: #b467a6;
+      --ink: #24212a;
+      --muted: #77727f;
+      --bg: #f6f5f8;
+      --line: #e8e5ed;
+      --card: #fff;
+      --good: #217553;
+      --bad: #b14350;
+      --radius: 20px;
+      font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--bg); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .hero { background: linear-gradient(120deg, #23001f 0%, var(--purple) 58%, #4a1042 100%); color: #fff; position: relative; overflow: hidden; }
+    .hero::after { content: ''; width: 430px; height: 430px; border: 1px solid rgba(255,255,255,.11); border-radius: 50%; position: absolute; right: -110px; top: -270px; box-shadow: 0 0 0 67px rgba(255,255,255,.025), 0 0 0 134px rgba(255,255,255,.025); pointer-events: none; }
+    .shell { max-width: 1440px; margin: auto; padding: 0 34px; }
+    .header-inner { padding-top: 30px; padding-bottom: 32px; position: relative; z-index: 1; }
+    .eyebrow { font-size: 11px; font-weight: 850; letter-spacing: .24em; text-transform: uppercase; opacity: .77; }
+    .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+    h1 { font-size: clamp(27px, 3.2vw, 46px); letter-spacing: -.055em; line-height: 1.04; margin: 15px 0 11px; font-weight: 820; }
+    .hero p { margin: 0; color: #e7dbe4; font-size: 14px; line-height: 1.5; }
+    .status { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 11px 13px; border: 1px solid rgba(255,255,255,.2); border-radius: 100px; background: rgba(255,255,255,.07); color: #f9ecf6; font-size: 12px; font-weight: 650; }
+    .status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #b9ead5; box-shadow: 0 0 0 3px rgba(185,234,213,.13); }
+    .stat-row { display: flex; flex-wrap: wrap; gap: 27px; margin-top: 25px; }
+    .hero-stat { min-width: 120px; border-left: 1px solid rgba(255,255,255,.2); padding-left: 16px; }
+    .hero-stat:first-child { padding-left: 0; border-left: 0; }
+    .hero-stat b { display: block; font-size: 26px; line-height: 1.15; font-weight: 820; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+    .hero-stat span { color: #d8c7d5; font-size: 12px; }
+    main { padding-top: 25px !important; padding-bottom: 32px !important; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .small-info { color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { appearance: none; border: 1px solid #dcd7e1; background: #fff; color: #392b3b; padding: 9px 13px; border-radius: 10px; font-size: 12px; font-weight: 750; transition: border .15s, background .15s; }
+    .btn:hover { border-color: #b6a4b6; background: #fcf9fc; }
+    .btn-playoffs { background: var(--purple); color: #fff; border-color: var(--purple); }
+    .btn-playoffs:hover { background: #511049; border-color: #511049; }
+    .btn:focus-visible, .tab:focus-visible { outline: 3px solid #b467a6; outline-offset: 2px; }
+    .btn-danger { color: #983444; }
+    .btn.active { background: #f5ebf2; border-color: #ae7ca5; color: var(--purple); }
+    .layout { display: grid; grid-template-columns: minmax(610px, 1.58fr) minmax(370px, 1fr); align-items: start; gap: 18px; }
+    .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; box-shadow: 0 8px 28px rgba(39,20,43,.025); }
+    .panel-heading { padding: 23px 24px 20px; display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+    .kicker { font-size: 10px; font-weight: 850; color: #8a5581; letter-spacing: .19em; text-transform: uppercase; margin-bottom: 7px; }
+    h2 { margin: 0; letter-spacing: -.038em; font-size: 21px; font-weight: 800; }
+    .panel-subtitle { margin: 7px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+    .round-badge { font-size: 11px; background: #f4eaf2; color: #72346a; border-radius: 30px; padding: 7px 10px; font-weight: 750; white-space: nowrap; }
+    .table-scroll { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+    thead { background: #faf9fb; }
+    th { text-align: center; padding: 13px 8px; white-space: nowrap; font-size: 10px; color: #807985; font-weight: 850; letter-spacing: .07em; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    th:nth-child(2), td:nth-child(2) { text-align: left; }
+    th:nth-child(1), td:nth-child(1) { padding-left: 22px; }
+    th:last-child, td:last-child { padding-right: 23px; }
+    td { padding: 18px 8px; text-align: center; border-bottom: 1px solid #f1eef2; font-size: 13px; font-weight: 620; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:first-child { background: #fcf7fb; }
+    tbody tr:hover { background: #faf8fa; }
+    .position { color: #9d92a0; font-weight: 770; font-size: 12px; }
+    .leader-position { color: var(--purple); }
+    .team-name { font-size: 12.5px; font-weight: 760; white-space: nowrap; }
+    .strong-cell { font-weight: 850; color: var(--purple); }
+    .muted-cell { color: #807b83; }
+    .diff-positive { color: var(--good); }
+    .diff-negative { color: var(--bad); }
+    .table-note { border-top: 1px solid var(--line); background: #fcfbfd; padding: 17px 23px; }
+    .table-note b { display: block; font-size: 12px; margin-bottom: 5px; }
+    .table-note p { margin: 0; font-size: 11px; color: #77717c; line-height: 1.6; }
+    .progress-track { height: 6px; background: #eee9ef; overflow: hidden; border-radius: 5px; margin: 0 24px 19px; }
+    .progress-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #5b1d54, #b86aa9); transition: width .25s; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 17px; }
+    .tab { border: 1px solid #e7e2e9; border-radius: 9px; font-size: 11px; font-weight: 800; color: #6d6371; background: white; padding: 9px 12px; }
+    .tab.active { border-color: var(--purple); color: white; background: var(--purple); }
+    .fixture-content { padding: 0 20px 22px; }
+    .round-title { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 12px 2px; }
+    .round-title strong { font-size: 13px; }
+    .round-title span { font-size: 11px; color: var(--muted); }
+    .game { border: 1px solid #ece8ee; border-radius: 12px; padding: 12px; margin-bottom: 8px; background: #fff; }
+    .game:last-child { margin-bottom: 0; }
+    .game.played { border-color: #d9ebdf; background: #fdfefd; }
+    .game.invalid { border-color: #e8a5ae; background: #fff8f8; }
+    .game-line { display: grid; grid-template-columns: minmax(0,1fr) 47px 12px 47px minmax(0,1fr); gap: 5px; align-items: center; }
+    .game-team { font-size: 11px; font-weight: 750; line-height: 1.23; min-width: 0; }
+    .game-team.home { text-align: right; }
+    .game-team.away { text-align: left; }
+    .game-team.winner { color: #54114c; }
+    .game-team.loser { color: #77717a; }
+    .game-score { min-width: 0; width: 47px; height: 40px; text-align: center; background: #f8f7fa; border: 1px solid #e0dce4; border-radius: 8px; font-size: 16px; font-weight: 850; font-variant-numeric: tabular-nums; color: #2e1f31; outline: none; appearance: textfield; }
+    .game-score::-webkit-outer-spin-button, .game-score::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .game-score:focus { border-color: var(--purple); background: white; box-shadow: 0 0 0 3px rgba(48,0,43,.09); }
+    .score-sep { text-align: center; color: #c1bac4; font-weight: 800; }
+    .game-meta { font-size: 10px; color: #88818e; margin-top: 9px; text-align: center; }
+    .invalid .game-meta { color: var(--bad); }
+    .editing-fixture { padding: 0 2px; display: flex; align-items: center; gap: 7px; }
+    .editing-fixture select { min-width: 0; flex: 1; padding: 9px 3px; background: #faf9fb; border-radius: 8px; border: 1px solid #e1dce5; color: #46354a; font-weight: 650; font-size: 11px; }
+    .editing-fixture span { font-size: 10px; font-weight: 800; color: #8c808d; }
+    .edit-label { text-transform: uppercase; font-size: 9px; font-weight: 800; color: #867e8a; letter-spacing: .07em; margin: 0 0 8px 2px; }
+    .warning { border: 1px solid #f0d7a7; background: #fff9ee; color: #77501c; padding: 11px 13px; border-radius: 10px; line-height: 1.5; font-size: 11px; margin: 0 20px 16px; }
+    .hidden { display: none !important; }
+    .footer { padding: 10px 0 25px; font-size: 11px; color: #87808b; text-align: center; line-height: 1.6; }
+    .toast { position: fixed; bottom: 24px; right: 24px; z-index: 20; background: #2e1b30; color: white; padding: 12px 17px; font-size: 12px; border-radius: 12px; max-width: 310px; box-shadow: 0 15px 40px #0002; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* Identidad de los equipos y cuadro de playoffs */
+    .team-with-logo { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .team-logo { display: inline-grid; place-items: center; flex-shrink: 0; width: 29px; height: 29px; border-radius: 7px; background: #f7f4f8; position: relative; overflow: hidden; }
+    .team-logo img { position: relative; z-index: 1; display: block; width: 100%; height: 100%; object-fit: contain; }
+    .logo-fallback { position: absolute; inset: 0; display: grid; place-items: center; font-size: 9px; font-weight: 850; color: #96738f; }
+    .game-team { display: flex; align-items: center; gap: 5px; }
+    .game-team .team-logo { width: 22px; height: 22px; background: transparent; }
+    .game-team.home { justify-content: flex-end; flex-direction: row-reverse; }
+    .game-team.away { justify-content: flex-start; }
+    .game-team .game-team-text { min-width: 0; overflow-wrap: anywhere; }
+    /* Cuadro orbital de playoffs · Comarca Basket */
+    .playoffs-panel { margin-top: 22px; }
+    .playoffs-top { align-items: center; flex-wrap: wrap; padding-bottom: 14px; }
+    .bracket-notice { display:flex; align-items:flex-start; gap:9px; margin:0 24px 19px; padding:12px 15px; border-radius:11px; border:1px solid #e7d8e4; background:#fcf8fc; color:#67405f; font-size:12px; line-height:1.55; }
+    .bracket-notice.final { border-color:#c9e1d5; background:#f5faf7; color:#24684c; }
+    .bracket-notice-mark { font-size:17px; font-weight:900; line-height:1.1; flex-shrink:0; }
+    .orbit-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:0 24px 12px; font-size:11px; color:#817381; }
+    .orbit-legend { display:flex; align-items:center; gap:8px; font-weight:730; }
+    .orbit-legend-dot { width:7px; height:7px; border-radius:50%; background:#be86d8; box-shadow:0 0 0 4px rgba(190,134,216,.15); }
+    .orbit-scroll-hint { color:#98819a; }
+    .orbit-viewport { position:relative; overflow-x:auto; overflow-y:hidden; margin:0 24px; border-radius:22px; background:radial-gradient(ellipse at 50% 49%,#23142e 0%,#150f20 39%,#0f0d17 72%,#0b0c12 100%); scrollbar-color:#805488 #1e1826; scrollbar-width:thin; overscroll-behavior-x:contain; }
+    .orbit-viewport::before { content:''; position:absolute; inset:0; opacity:.36; pointer-events:none; z-index:0; background-image:radial-gradient(#8c7796 .65px,transparent .65px); background-size:22px 22px; }
+    .orbit-frame { position:relative; min-width:0; }
+    .orbit-scene { position:absolute; left:0; top:0; height:1090px; width:1240px; transform-origin:top left; isolation:isolate; }
+    .orbit-geometry { position:absolute; inset:0; width:1240px; height:1090px; overflow:visible; pointer-events:none; }
+    .orbit-ring { fill:none; stroke:#9f83ae; stroke-width:1; opacity:.11; stroke-dasharray:3 9; }
+    .orbit-ring.inner { opacity:.2; stroke-dasharray:none; }
+    .orbit-line { fill:none; stroke:#98889e; stroke-width:1.8; opacity:.45; stroke-linecap:round; transition:stroke .28s,stroke-width .28s,opacity .28s,filter .28s; }
+    .orbit-line.is-lit { stroke:#ebb0f2; stroke-width:3.1; opacity:1; filter:drop-shadow(0 0 5px #bc69d8); }
+    .orbit-endpoint { fill:#a78da8; opacity:.63; }
+    .orbit-node { position:absolute; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px solid rgba(223,195,237,.28); background:linear-gradient(145deg,rgba(55,40,72,.98),rgba(28,23,39,.97)); color:#f4ecf7; border-radius:14px; cursor:pointer; text-align:center; padding:10px; transform:translate(-50%,-50%); transition:transform .23s ease,border-color .23s ease,box-shadow .23s ease,background .23s ease; box-shadow:0 12px 25px rgba(0,0,0,.18); z-index:3; }
+    .orbit-node:hover,.orbit-node:focus-visible,.orbit-node.is-selected { transform:translate(-50%,-50%) scale(1.06); border-color:#e6aaed; background:linear-gradient(145deg,#674269,#32243e); box-shadow:0 0 0 4px rgba(190,116,216,.12),0 0 24px rgba(198,103,231,.43),0 17px 32px rgba(0,0,0,.3); outline:none; z-index:7; }
+    .orbit-team { width:125px; min-height:83px; gap:4px; border-color:rgba(255,255,255,.15); background:rgba(32,26,41,.94); }
+    .orbit-team .team-logo { width:36px; height:36px; background:transparent; }
+    .orbit-team .logo-fallback { color:#edccf1; }
+    .orbit-team-name { font-size:11px; font-weight:840; line-height:1.2; }
+    .orbit-team-seed { position:absolute; top:-12px; right:-9px; height:25px; min-width:25px; display:grid; place-items:center; border-radius:14px; padding:0 5px; background:#9d5ca7; color:#fff; box-shadow:0 3px 12px #0004; font-size:10px; font-weight:900; }
+    .orbit-team.pending { opacity:.5; border-style:dashed; }
+    .orbit-series { width:148px; min-height:100px; gap:6px; border-color:rgba(206,153,220,.35); }
+    .orbit-series.semifinal { width:131px; min-height:104px; border-color:rgba(234,173,244,.43); }
+    .orbit-series-label { font-size:10px; text-transform:uppercase; letter-spacing:.16em; font-weight:850; color:#d6a9df; }
+    .orbit-series-names { font-size:10px; line-height:1.35; color:#f1e3f3; font-weight:720; max-width:100%; }
+    .orbit-series-score { display:flex; align-items:center; justify-content:center; gap:9px; font-variant-numeric:tabular-nums; font-size:24px; font-weight:900; letter-spacing:-.04em; line-height:1; }
+    .orbit-series-score i { font-style:normal; color:#9a7f9e; font-size:14px; }
+    .orbit-series-status { font-size:10px; font-weight:760; color:#bba7c2; }
+    .orbit-series.done { border-color:#e5b7db; box-shadow:0 0 23px rgba(158,83,165,.2); }
+    .orbit-series.done .orbit-series-status { color:#d6f0d4; }
+    .orbit-final { width:151px; min-height:155px; border-radius:50%; gap:7px; background:radial-gradient(circle at 40% 30%,#71507b,#3a274b 54%,#1d172b); border:1.5px solid rgba(255,218,239,.7); box-shadow:0 0 0 8px rgba(222,175,229,.07),0 0 35px rgba(192,119,202,.18); }
+    .orbit-final::before { content:''; position:absolute; inset:-16px; border:1px solid rgba(244,205,246,.24); border-radius:50%; animation:haloPulse 4s ease-in-out infinite; pointer-events:none; }
+    .orbit-final:hover { transform:translate(-50%,-50%) scale(1.07); box-shadow:0 0 0 10px rgba(222,175,229,.1),0 0 40px rgba(213,142,233,.48); }
+    .orbit-cup { font-size:31px; line-height:1; display:block; filter:drop-shadow(0 3px 7px rgba(0,0,0,.4)); }
+    .orbit-final .orbit-series-label { font-size:9px; }
+    .orbit-final .orbit-series-score { font-size:20px; }
+    .orbit-final .orbit-series-status { font-size:9px; }
+    .orbit-caption { display:flex; align-items:center; justify-content:center; gap:7px; padding:16px 6px 17px; text-align:center; color:#bdaaca; font-size:10px; letter-spacing:.18em; text-transform:uppercase; font-weight:800; }
+    .orbit-caption::before,.orbit-caption::after { content:''; width:40px; height:1px; background:linear-gradient(90deg,transparent,#987fa0); }
+    .orbit-caption::after { transform:rotate(180deg); }
+    .bracket-footer { padding:14px 24px 20px; font-size:11px; line-height:1.65; color:#857b88; }
+    .series-workspace { padding:19px 24px 25px; border-top:1px solid #eee7f0; }
+    .series-head { display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:15px; }
+    .series-head h3 { font-size:18px; letter-spacing:-.04em; margin:0; }
+    .series-help { font-size:11px; color:#84788a; }
+    .series-switcher { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:15px; }
+    .series-chip { font-size:11px; font-weight:830; border:1px solid #e9e0ed; background:#f8f5fa; color:#755c7a; border-radius:8px; padding:9px 12px; cursor:pointer; transition:all .15s; }
+    .series-chip.active,.series-chip:hover { background:#4d2454; color:#fff; border-color:#4d2454; }
+    .series-chip.done:not(.active) { border-color:#bcd9c8; color:#256a4a; background:#f6faf7; }
+    .series-editor { border:1px solid #e8e1eb; border-radius:15px; background:linear-gradient(140deg,#fff,#faf8fc); padding:18px; min-height:180px; }
+    .editor-top { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+    .editor-title { font-weight:880; font-size:14px; }
+    .editor-status { color:#7a6580; font-size:11px; margin-top:5px; }
+    .editor-teams { display:grid; grid-template-columns:minmax(0,1fr) 52px minmax(0,1fr); align-items:center; gap:8px; margin-bottom:18px; }
+    .editor-team { display:flex; gap:10px; align-items:center; justify-content:center; background:#f7f1f8; border:1px solid #e9dfee; border-radius:12px; padding:9px 10px; min-width:0; min-height:64px; font-size:12px; font-weight:850; }
+    .editor-team .team-logo { height:34px; width:34px; background:transparent; }
+    .editor-team.winner { border-color:#c0dac5; background:#f0f8f2; }
+    .editor-win-score { text-align:center; color:#4c2854; font-weight:900; font-size:22px; }
+    .editor-win-score small { display:block; font-size:9px; font-weight:750; letter-spacing:.05em; color:#8f7f8e; }
+    .editor-games { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+    .editor-game { border:1px solid #e8e0e9; border-radius:11px; background:#fff; padding:12px 10px; min-width:0; }
+    .editor-game.invalid { border-color:#e0a3ac; background:#fff8f8; }
+    .editor-game.unneeded { opacity:.55; }
+    .editor-game-label { color:#806b82; font-size:10px; text-transform:uppercase; letter-spacing:.085em; font-weight:850; margin-bottom:9px; }
+    .editor-game-scores { display:flex; align-items:center; gap:7px; justify-content:center; }
+    .editor-game-scores input { width:70px; max-width:42%; border-radius:8px; border:1px solid #dcd3df; text-align:center; height:38px; background:#faf8fb; font-size:17px; font-weight:850; color:#302036; outline:none; appearance:textfield; }
+    .editor-game-scores input:focus { border-color:#965fa4; box-shadow:0 0 0 3px #aa71b721; background:#fff; }
+    .editor-game-scores input::-webkit-inner-spin-button,.editor-game-scores input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+    .editor-game-scores span { font-weight:850; color:#aa9baa; }
+    .editor-game-caption { font-size:10px; color:#8a7d8b; margin-top:8px; text-align:center; min-height:14px; }
+    .editor-bottom { display:flex; justify-content:space-between; flex-wrap:wrap; align-items:center; gap:12px; margin-top:13px; }
+    .editor-bottom .small-info { max-width:750px; }
+    .editor-reset { font-size:11px; color:#874454; border:0; background:transparent; font-weight:760; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+    .editor-reset:hover { color:#c0395b; }
+    @keyframes haloPulse { 0%,100% { opacity:.45; transform:scale(.97) } 50% { opacity:1; transform:scale(1.06) } }
+    @media (max-width:800px) {
+      .orbit-scroll-hint { display:block; }
+      .orbit-viewport { margin:0 10px; }
+      .orbit-toolbar { padding:0 14px 12px; }
+      .bracket-notice { margin:0 12px 13px; }
+      .series-workspace { padding:16px 12px 20px; }
+      .bracket-footer { padding:14px 15px 17px; }
+      .editor-games { grid-template-columns:1fr; }
+      .editor-game { display:grid; grid-template-columns:80px 1fr; align-items:center; gap:6px; }
+      .editor-game-label { margin-bottom:0; }
+      .editor-game-caption { grid-column:1/-1; margin-top:0; }
+      .editor-team { font-size:10px; gap:5px; flex-direction:column; text-align:center; }
+      .editor-team .team-logo { width:29px; height:29px; }
+    }
+    @media (max-width:640px) {
+      .team-with-logo { gap:5px; } .team-logo { width:24px; height:24px; }
+      .game-team { gap:2px; } .game-team .team-logo { width:17px; height:17px; }
+      .game-team .game-team-text { font-size:9.5px; }
+      .series-editor { padding:12px; }
+      .series-chip { padding:8px 10px; }
+    }
+    @media (prefers-reduced-motion:reduce) { .orbit-final::before { animation:none; } }
+    @media (max-width: 1150px) { .shell { padding-left: 20px; padding-right: 20px; } .layout { grid-template-columns: 1fr; } .fixture-content { display: block; } }
+    @media (max-width: 640px) { .shell { padding-left: 11px; padding-right: 11px; } .header-inner { padding-top: 27px; padding-bottom: 25px; } .hero-top { flex-direction: column; gap: 15px; } h1 { margin-top: 10px; } .stat-row { gap: 15px; } .hero-stat { min-width: 80px; padding-left: 12px; } .hero-stat b { font-size: 23px; } .panel-heading { padding: 20px 15px 16px; } h2 { font-size: 20px; } th { font-size: 9px; padding: 11px 6px; } td { font-size: 12px; padding: 15px 6px; } th:nth-child(1), td:nth-child(1) { padding-left: 12px; } th:last-child, td:last-child { padding-right: 12px; } .team-name { font-size: 11px; white-space: normal; min-width: 97px; } .table-note { padding: 14px; } .tabs { padding: 0 12px 15px; } .tab { padding: 8px 10px; } .fixture-content { padding: 0 12px 16px; } .game { padding: 10px 6px; } .game-line { grid-template-columns: minmax(0, 1fr) 42px 10px 42px minmax(0, 1fr); gap: 4px; } .game-team { font-size: 10px; } .game-score { width: 42px; height: 38px; } .actions { width: 100%; } .btn { flex: 1; } }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="shell header-inner">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">Gestor de torneo · Básquet</div>
+          <h1>Calculadora de posiciones<span style="color:#cd87bc">.</span></h1>
+          <p>8 equipos · Fase regular a una rueda · 7 fechas · 2 puntos por victoria y 1 por derrota</p>
+        </div>
+        <div class="status" id="saveStatus">Guardado automático</div>
+      </div>
+      <div class="stat-row" aria-live="polite">
+        <div class="hero-stat"><b id="playedCount">0 / 28</b><span>Partidos jugados</span></div>
+        <div class="hero-stat"><b id="pendingCount">28</b><span>Partidos pendientes</span></div>
+        <div class="hero-stat"><b id="leaderName">—</b><span>Primer puesto</span></div>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="toolbar">
+      <div class="small-info">Cargá resultados: se actualizarán las posiciones y el camino al campeonato.</div>
+      <div class="actions">
+        <button class="btn btn-playoffs" id="jumpPlayoffs" type="button">Ver cuadro de playoffs ↓</button>
+        <button class="btn" id="editFixture" type="button">Editar cruces</button>
+        <button class="btn" id="exportBackup" type="button">Exportar copia</button>
+        <button class="btn" id="importBackup" type="button">Importar copia</button>
+        <button class="btn btn-danger" id="resetScores" type="button">Borrar resultados</button>
+        <input class="hidden" type="file" id="backupFile" accept=".json,application/json" />
+      </div>
+    </div>
+
+    <div class="layout">
+      <section class="panel" aria-labelledby="standingTitle">
+        <div class="panel-heading">
+          <div>
+            <div class="kicker">Clasificación en vivo</div>
+            <h2 id="standingTitle">Tabla de posiciones</h2>
+            <p class="panel-subtitle">Se ordena automáticamente después de cada resultado válido.</p>
+          </div>
+          <span class="round-badge">Fase regular</span>
+        </div>
+        <div class="table-scroll">
+          <table aria-label="Tabla de posiciones">
+            <thead>
+              <tr>
+                <th>#</th><th>EQUIPO</th><th title="Partidos jugados">PJ</th><th title="Partidos ganados">PG</th><th title="Partidos perdidos">PP</th><th title="Puntos a favor">PF</th><th title="Puntos en contra">PC</th><th title="Diferencia de tantos">DIF</th><th title="Puntos de clasificación">PTS</th>
+              </tr>
+            </thead>
+            <tbody id="standingsBody"></tbody>
+          </table>
+        </div>
+        <div class="table-note">
+          <b>Regla de desempate: enfrentamientos entre sí</b>
+          <p>Si dos equipos igualan en puntos y ya se enfrentaron, prevalece el ganador de ese partido. Para tres o más empatados se utiliza una mini tabla entre ellos, una vez completados sus cruces. Si persiste la igualdad: diferencia y tantos a favor entre sí, diferencia general y tantos a favor generales. Mientras falten enfrentamientos, el orden es provisional.</p>
+          <p style="margin-top:8px">PJ: jugados · PG: ganados · PP: perdidos · PF: a favor · PC: en contra · DIF: diferencia · PTS: puntos en tabla.</p>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="fixturesTitle">
+        <div class="panel-heading">
+          <div>
+            <div class="kicker">Carga de marcadores</div>
+            <h2 id="fixturesTitle">Resultados por fecha</h2>
+            <p class="panel-subtitle" id="fixtureSubtitle">Elegí una fecha y completá los cuatro partidos.</p>
+          </div>
+          <span class="round-badge" id="fixtureProgress">0%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="progressBar"></div></div>
+        <div class="tabs" id="roundTabs" role="group" aria-label="Elegir fecha"></div>
+        <div class="warning hidden" id="fixtureWarning" role="alert"></div>
+        <div class="fixture-content" id="fixtureContent"></div>
+      </section>
+    </div>
+
+    <section class="panel playoffs-panel" aria-labelledby="playoffsTitle" id="playoffsSection">
+      <div class="panel-heading playoffs-top">
+        <div>
+          <div class="kicker">Comarca Basket · camino al título</div>
+          <h2 id="playoffsTitle">Camino al campeonato</h2>
+          <p class="panel-subtitle">Ocho equipos. Cuartos, semifinales y final al mejor de tres partidos.</p>
+        </div>
+        <span class="round-badge" id="playoffsStatus">Proyección</span>
+      </div>
+      <div class="bracket-notice" id="playoffsNotice" role="status"></div>
+      <div class="orbit-toolbar">
+        <span class="orbit-legend"><span class="orbit-legend-dot"></span> Tocá un cruce para cargar la serie</span>
+        <span class="orbit-scroll-hint">En el celular, deslizá el cuadro hacia los lados ↔</span>
+      </div>
+      <div class="orbit-viewport" id="orbitViewport" tabindex="0" aria-label="Cuadro circular de playoffs. Desplazable horizontalmente en pantallas pequeñas">
+        <div class="orbit-frame" id="orbitFrame">
+          <div class="orbit-scene" id="orbitScene"></div>
+        </div>
+      </div>
+      <div class="orbit-caption">CUARTOS <span>·</span> SEMIFINALES <span>·</span> FINAL</div>
+      <div class="series-workspace" id="seriesWorkspace">
+        <div class="series-head">
+          <div><div class="kicker">Panel de resultados</div><h3>Series al mejor de 3</h3></div>
+          <span class="series-help">Dos victorias para avanzar · el 3.º juego se habilita solo si es necesario</span>
+        </div>
+        <div class="series-switcher" id="seriesSwitcher" role="group" aria-label="Elegir cruce de playoffs"></div>
+        <div class="series-editor" id="seriesEditor"></div>
+      </div>
+      <div class="bracket-footer">Orden de cuartos: 1.º–8.º, 4.º–5.º, 2.º–7.º y 3.º–6.º. Los ganadores avanzan de forma automática. Si cambia un cruce por resultados de la fase regular, sus marcadores anteriores no se aplican a otros equipos. Los resultados de playoffs también quedan en el archivo JSON exportado.</div>
+    </section>
+    <div class="footer">Archivo HTML de uso local · Los datos se guardan en el navegador. Los escudos requieren internet. Usá «Exportar copia» como respaldo.</div>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (() => {
+    'use strict';
+    const TEAMS = [
+      { id: 'dv', name: 'DEPORTIVO VIEDMA', short: 'Dep. Viedma', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/Deportivo-Viedma.png' },
+      { id: 'ate', name: 'ATENAS', short: 'Atenas', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/Atenas.png' },
+      { id: 'jor', name: 'JORGE NEWBERY', short: 'Jorge Newbery', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/Jorge-Newbery.png' },
+      { id: 'sol', name: 'SOL DE MAYO', short: 'Sol de Mayo', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/Sol-de-Mayo.png' },
+      { id: 'vil', name: 'VILLA CONGRESO', short: 'Villa Congreso', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/Villa-Congreso.png' },
+      { id: 'pat', name: 'DEPORTIVO PATAGONES', short: 'Dep. Patagones', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/Deportivo-Patagones.png' },
+      { id: 'fer', name: 'FERRO (SAO)', short: 'Ferro (SAO)', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/Ferro-SAO-1.png' },
+      { id: 'san', name: 'SAN MARTIN', short: 'San Martín', logo: 'https://comarcabasket.com.ar/wp-content/uploads/2026/09/San-Martin.png' }
+    ];
+    const teamById = Object.fromEntries(TEAMS.map(t => [t.id, t]));
+    const STORE = 'calculadora_basquet_8_equipos_v1';
+
+    // Fixture inicial de ejemplo: 7 fechas, 4 partidos por fecha, todos contra todos una vez.
+    function generateSchedule() {
+      const circle = TEAMS.map(t => t.id);
+      const fixture = [];
+      for (let round = 0; round < 7; round++) {
+        for (let game = 0; game < 4; game++) {
+          let home = circle[game], away = circle[7 - game];
+          if ((round + game) % 2 === 1) [home, away] = [away, home];
+          fixture.push({ id: `f${round + 1}p${game + 1}`, round: round + 1, home, away, a: '', b: '' });
+        }
+        circle.splice(1, 0, circle.pop());
+      }
+      return fixture;
+    }
+    const DEFAULT = generateSchedule();
+    let matches = DEFAULT.map(m => ({ ...m }));
+    let currentRound = 1;
+    let editing = false;
+    let storageAvailable = true;
+    let toastTimer;
+    const $ = id => document.getElementById(id);
+    const idCheck = new Set(TEAMS.map(t => t.id));
+    const PLAYOFF_IDS = ['Q1', 'Q2', 'Q3', 'Q4', 'S1', 'S2', 'F'];
+    const PLAYOFF_LABELS = { Q1:'Cuartos 1 · 1.º vs. 8.º', Q2:'Cuartos 2 · 4.º vs. 5.º', Q3:'Cuartos 3 · 2.º vs. 7.º', Q4:'Cuartos 4 · 3.º vs. 6.º', S1:'Semifinal A', S2:'Semifinal B', F:'Gran final' };
+    const ORBIT = {
+      Q1: {x:360,y:358}, Q2:{x:360,y:732}, Q3:{x:880,y:358}, Q4:{x:880,y:732},
+      S1:{x:438,y:545}, S2:{x:802,y:545}, F:{x:620,y:545}
+    };
+    const SEED_POSITIONS = [
+      {x:175,y:340}, {x:360,y:162}, {x:360,y:928}, {x:175,y:750},
+      {x:880,y:162}, {x:1065,y:340}, {x:1065,y:750}, {x:880,y:928}
+    ];
+    const SEED_NUMBERS = [1,8,4,5,2,7,3,6];
+    const SEED_QUARTERS = ['Q1','Q1','Q2','Q2','Q3','Q3','Q4','Q4'];
+    const SERIES_CONNECTIONS = [['Q1','S1'],['Q2','S1'],['Q3','S2'],['Q4','S2'],['S1','F'],['S2','F']];
+    let playoffData = {};
+    let selectedSeries = 'Q1';
+    let lastPlayoffState = null;
+    let orbitInitialized = false;
+
+    function sanitizedPlayoffs(source) {
+      const result = {};
+      if (!source || typeof source !== 'object' || Array.isArray(source)) return result;
+      for (const id of PLAYOFF_IDS) {
+        const record = source[id];
+        if (!record || !Array.isArray(record.pair) || !Array.isArray(record.games)) continue;
+        if (record.pair.length !== 2 || !record.pair.every(v=>idCheck.has(v))) continue;
+        result[id] = { pair:record.pair.slice(), games:[0,1,2].map(i=>({
+          a:normalizeScore(record.games[i]?.a), b:normalizeScore(record.games[i]?.b)
+        })) };
+      }
+      return result;
+    }
+    function getStoredSeries(id, pair) {
+      const record = playoffData[id];
+      if (!pair[0] || !pair[1] || !record || record.pair[0] !== pair[0] || record.pair[1] !== pair[1])
+        return Array.from({length:3},()=>({a:'',b:''}));
+      return record.games;
+    }
+    function buildSeries(id, pair) {
+      const [a,b] = pair;
+      const games = getStoredSeries(id,pair);
+      const wins = [0,0];
+      let clinchGame = 0;
+      let invalid = false;
+      for (let i=0; i<3; i++) {
+        const g=games[i];
+        if (!a || !b || wins[0]===2 || wins[1]===2) break;
+        // El tercer partido se computa únicamente si los dos primeros están definidos y se repartieron.
+        if (i===2 && (games[0].a==='' || games[0].b==='' || games[1].a==='' || games[1].b==='' || wins[0]!==1 || wins[1]!==1)) break;
+        if (g.a==='' || g.b==='') continue;
+        if (+g.a===+g.b) { invalid=true; continue; }
+        wins[+g.a > +g.b ? 0 : 1]++;
+        if (wins[0]===2 || wins[1]===2) clinchGame=i+1;
+      }
+      const winner = wins[0]===2 ? a : wins[1]===2 ? b : null;
+      const validFirstTwo=games[0].a!=='' && games[0].b!=='' && games[1].a!=='' && games[1].b!=='' && +games[0].a!==+games[0].b && +games[1].a!==+games[1].b;
+      return {id, pair, games, wins, winner, clinchGame, invalid, thirdNeeded:validFirstTwo && wins[0]===1 && wins[1]===1};
+    }
+    function derivePlayoffState(stats,played) {
+      const seeds = played ? stats : [];
+      const Q1=buildSeries('Q1',[seeds[0]?.id || null,seeds[7]?.id || null]);
+      const Q2=buildSeries('Q2',[seeds[3]?.id || null,seeds[4]?.id || null]);
+      const Q3=buildSeries('Q3',[seeds[1]?.id || null,seeds[6]?.id || null]);
+      const Q4=buildSeries('Q4',[seeds[2]?.id || null,seeds[5]?.id || null]);
+      const S1=buildSeries('S1',[Q1.winner,Q2.winner]);
+      const S2=buildSeries('S2',[Q3.winner,Q4.winner]);
+      const F=buildSeries('F',[S1.winner,S2.winner]);
+      return {seeds, Q1,Q2,Q3,Q4,S1,S2,F};
+    }
+    function seriesSummary(o) {
+      if (!o.pair[0] || !o.pair[1]) return 'Esperando clasificados';
+      if (o.winner) return `Ganó ${teamById[o.winner].short} · ${o.wins[0]}–${o.wins[1]}`;
+      if (o.invalid) return 'Corregí los empates';
+      if (o.thirdNeeded) return 'Tercer partido decisivo';
+      if (o.wins[0]+o.wins[1]) return 'Serie en juego';
+      return 'Serie por comenzar';
+    }
+    function orbitSeedNode(seed, pos, i) {
+      const n=SEED_NUMBERS[i];
+      const quarter=SEED_QUARTERS[i];
+      const t=seed || null;
+      const content=t ? `${teamLogo(t)}<span class="orbit-team-name">${t.short}</span>` : `<span class="orbit-team-name">Por definir</span>`;
+      return `<button type="button" class="orbit-node orbit-team ${!t?'pending':''}" data-open-series="${quarter}" data-focus-series="${quarter}" style="left:${pos.x}px;top:${pos.y}px" aria-label="Puesto ${n}: ${t?t.name:'por definir'}. Abrir ${PLAYOFF_LABELS[quarter]}">
+        <span class="orbit-team-seed">${n}º</span>${content}</button>`;
+    }
+    function orbitSeriesNode(o, x, y, stage) {
+      const [a,b]=o.pair;
+      const p1=a?teamById[a].short:'A definir';
+      const p2=b?teamById[b].short:'A definir';
+      const cls=stage==='semi'?'semifinal':'';
+      const ready=Boolean(a&&b);
+      const final=stage==='final';
+      const status=o.winner?'Serie definida':ready?'Al mejor de 3':'Por definir';
+      if (final) {
+        return `<button type="button" class="orbit-node orbit-final ${o.winner?'done':''} ${selectedSeries===o.id?'is-selected':''}" data-open-series="F" data-focus-series="F" style="left:${x}px;top:${y}px" aria-label="Gran final: ${p1} contra ${p2}; ${seriesSummary(o)}. Editar serie">
+          <span class="orbit-cup" aria-hidden="true">🏆</span>
+          <span class="orbit-series-label">${o.winner?'CAMPEÓN':'GRAN FINAL'}</span>
+          ${o.winner?`<span class="orbit-series-names">${teamById[o.winner].short}</span>`:`<span class="orbit-series-score">${ready?o.wins[0]:'–'} <i>:</i> ${ready?o.wins[1]:'–'}</span>`}
+          <span class="orbit-series-status">${o.winner?'Serie '+o.wins.join('–'):'Mejor de 3'}</span>
+        </button>`;
+      }
+      return `<button type="button" class="orbit-node orbit-series ${cls} ${o.winner?'done':''} ${selectedSeries===o.id?'is-selected':''}" data-open-series="${o.id}" data-focus-series="${o.id}" style="left:${x}px;top:${y}px" aria-label="${PLAYOFF_LABELS[o.id]}: ${p1} contra ${p2}; ${seriesSummary(o)}. Editar serie">
+        <span class="orbit-series-label">${stage==='semi'?'SEMIFINAL': 'CUARTOS'} · ${o.id}</span>
+        <span class="orbit-series-names">${p1} / ${p2}</span>
+        <span class="orbit-series-score">${ready?o.wins[0]:'–'} <i>:</i> ${ready?o.wins[1]:'–'}</span>
+        <span class="orbit-series-status">${status}</span>
+      </button>`;
+    }
+    function pathBetween(a,b) {
+      // Curva suave hacia el centro; sin interrumpir la legibilidad de las conexiones.
+      const dx=b.x-a.x,dy=b.y-a.y;
+      const cx=(a.x+b.x)/2 - dy*.08;
+      const cy=(a.y+b.y)/2 + dx*.08;
+      return `M ${a.x} ${a.y} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${b.x} ${b.y}`;
+    }
+    function orbitEdges() {
+      const lines=[];
+      for (let i=0; i<8; i++) {
+        const target=SEED_QUARTERS[i];
+        const chain=[target,target==='Q1'||target==='Q2'?'S1':'S2','F'].join(' ');
+        lines.push(`<path class="orbit-line" data-chain="${chain}" d="${pathBetween(SEED_POSITIONS[i],ORBIT[target])}" />`);
+      }
+      for (const [from,to] of SERIES_CONNECTIONS) {
+        let chain=from+' '+to;
+        if (to!=='F') chain+=' F';
+        lines.push(`<path class="orbit-line" data-chain="${chain}" d="${pathBetween(ORBIT[from],ORBIT[to])}" />`);
+      }
+      return lines.join('');
+    }
+    function renderOrbit(data) {
+      const champion=data.F.winner;
+      $('orbitScene').innerHTML=`
+        <svg class="orbit-geometry" viewBox="0 0 1240 1090" aria-hidden="true">
+          <defs><radialGradient id="coreGlow"><stop offset="0" stop-color="#ad61bf" stop-opacity=".17"/><stop offset="1" stop-color="#ad61bf" stop-opacity="0"/></radialGradient></defs>
+          <ellipse cx="620" cy="545" rx="534" ry="435" class="orbit-ring" />
+          <ellipse cx="620" cy="545" rx="365" ry="285" class="orbit-ring" />
+          <ellipse cx="620" cy="545" rx="230" ry="185" class="orbit-ring inner" />
+          <ellipse cx="620" cy="545" rx="130" ry="125" fill="url(#coreGlow)" />
+          ${orbitEdges()}
+          ${Object.values(ORBIT).map(p=>`<circle class="orbit-endpoint" cx="${p.x}" cy="${p.y}" r="3.4"/>`).join('')}
+        </svg>
+        <div style="position:absolute;left:555px;top:61px;color:#d1b6d7;font-size:11px;font-weight:900;letter-spacing:.27em;">RUMBO AL TÍTULO</div>
+        <div style="position:absolute;left:62px;top:532px;color:#b293ba;font-size:10px;font-weight:800;letter-spacing:.19em;writing-mode:vertical-rl;transform:rotate(180deg)">LLAVE A</div>
+        <div style="position:absolute;right:62px;top:532px;color:#b293ba;font-size:10px;font-weight:800;letter-spacing:.19em;writing-mode:vertical-rl">LLAVE B</div>
+        ${SEED_POSITIONS.map((pos,i)=>orbitSeedNode(data.seeds[SEED_NUMBERS[i]-1],pos,i)).join('')}
+        ${['Q1','Q2','Q3','Q4'].map(id=>orbitSeriesNode(data[id],ORBIT[id].x,ORBIT[id].y,'quarter')).join('')}
+        ${['S1','S2'].map(id=>orbitSeriesNode(data[id],ORBIT[id].x,ORBIT[id].y,'semi')).join('')}
+        ${orbitSeriesNode(data.F,ORBIT.F.x,ORBIT.F.y,'final')}
+        ${champion?`<div style="position:absolute;top:671px;width:100%;text-align:center;color:#f0d2f3;font-size:12px;font-weight:850;letter-spacing:.12em;pointer-events:none">${teamById[champion].name} · CAMPEÓN</div>`:''}
+      `;
+      highlightOrbit(selectedSeries);
+    }
+    function highlightOrbit(id) {
+      const scene=$('orbitScene');
+      scene.querySelectorAll('.orbit-line').forEach(el=>el.classList.toggle('is-lit',Boolean(id) && el.dataset.chain.split(' ').includes(id)));
+    }
+    function renderSwitcher(data) {
+      $('seriesSwitcher').innerHTML=PLAYOFF_IDS.map(id=>{
+        const o=data[id];
+        const status=o.winner?' ✓':(o.wins[0]+o.wins[1]?' · '+o.wins.join('–'):'');
+        return `<button type="button" class="series-chip ${id===selectedSeries?'active':''} ${o.winner?'done':''}" data-open-series="${id}" aria-pressed="${id===selectedSeries}">${PLAYOFF_LABELS[id]}${status}</button>`;
+      }).join('');
+    }
+    function editorTeam(id,win) {
+      if (!id) return `<div class="editor-team"><span>Por definir</span></div>`;
+      return `<div class="editor-team ${win?'winner':''}">${teamLogo(teamById[id])}<span>${teamById[id].short}</span></div>`;
+    }
+    function gameValid(g) { return g.a!=='' && g.b!=='' && +g.a!==+g.b; }
+    function renderSeriesEditor(data) {
+      const o=data[selectedSeries];
+      const ready=Boolean(o.pair[0]&&o.pair[1]);
+      const [a,b]=o.pair;
+      const status = ready?seriesSummary(o):'Primero deben definirse los clasificados de la fase anterior';
+      const rows=o.games.map((g,i)=>{
+        const active=ready && (i<2 || o.thirdNeeded);
+        const unneeded = i===2 && !o.thirdNeeded;
+        const disabled=active?'':'disabled';
+        const why=unneeded?(o.winner?'No fue necesario':'Se habilita si van 1–1'):'Partido al mejor de tres';
+        const tied=g.a!==''&&g.b!==''&&g.a===g.b;
+        return `<div class="editor-game ${tied?'invalid':''} ${unneeded?'unneeded':''}" data-editor-game="${i}">
+            <div class="editor-game-label">Partido ${i+1}</div>
+            <div class="editor-game-scores">
+              <input type="number" min="0" max="999" step="1" inputmode="numeric" placeholder="—" value="${g.a}" ${disabled} data-series="${selectedSeries}" data-gameindex="${i}" data-side="a" aria-label="Puntos de ${a?teamById[a].name:'equipo 1'} en el partido ${i+1}" />
+              <span>:</span>
+              <input type="number" min="0" max="999" step="1" inputmode="numeric" placeholder="—" value="${g.b}" ${disabled} data-series="${selectedSeries}" data-gameindex="${i}" data-side="b" aria-label="Puntos de ${b?teamById[b].name:'equipo 2'} en el partido ${i+1}" />
+            </div>
+            <div class="editor-game-caption" data-gamecaption="${i}">${tied?'No se admiten empates':gameValid(g)?(+g.a>+g.b?'Ganó '+(a?teamById[a].short:'equipo 1'):'Ganó '+(b?teamById[b].short:'equipo 2')):!active?why:'Pendiente'}</div>
+          </div>`;
+      }).join('');
+      $('seriesEditor').innerHTML=`
+        <div class="editor-top">
+          <div><div class="editor-title">${PLAYOFF_LABELS[selectedSeries]}</div><div class="editor-status" id="editorStatus">${status}</div></div>
+          <span class="round-badge">Mejor de 3</span>
+        </div>
+        <div class="editor-teams">
+          ${editorTeam(a,o.winner===a)}
+          <div class="editor-win-score" id="editorWins">${ready?o.wins.join('–'):'– : –'}<small>VICTORIAS</small></div>
+          ${editorTeam(b,o.winner===b)}
+        </div>
+        <div class="editor-games">${rows}</div>
+        <div class="editor-bottom">
+          <span class="small-info">${ready?'Ingresá los puntos de cada partido. El ganador avanza automáticamente al alcanzar dos victorias.':'Los cruces posteriores se habilitan cuando se definen las series anteriores.'}</span>
+          <button type="button" class="editor-reset" id="resetSeries" ${ready?'':'disabled'}>Borrar resultados de esta serie</button>
+        </div>`;
+    }
+    function renderPlayoffs({ stats, played }) {
+      const fixtureValid=inspectFixture().length===0;
+      const finished=played===28 && fixtureValid;
+      const data=derivePlayoffState(stats,played);
+      lastPlayoffState=data;
+      const note=$('playoffsNotice');
+      $('playoffsStatus').textContent=finished?'Fase regular completa':played?'Proyección en vivo':'Sin resultados';
+      note.classList.toggle('final',finished);
+      note.innerHTML=finished
+        ? '<span class="bracket-notice-mark">✓</span><span>Fase regular completa. Los cruces salen de la tabla y las series se definen al mejor de tres. Seleccioná cada llave para cargar resultados.</span>'
+        :played
+          ? `<span class="bracket-notice-mark">ⓘ</span><span><b>Proyección provisional:</b> hay ${played} de 28 partidos de la fase regular cargados. El cuadro puede cambiar${fixtureValid?'.':'; revisá también los cruces repetidos o faltantes.'} Las series guardadas solo se utilizan si sus participantes coinciden.</span>`
+          : '<span class="bracket-notice-mark">ⓘ</span><span>Importá tu copia .json o completá resultados de la fase regular. Los equipos aparecerán en el cuadro circular según sus posiciones.</span>';
+      renderOrbit(data);
+      renderSwitcher(data);
+      renderSeriesEditor(data);
+      updateOrbitScale();
+    }
+    function updateOrbitScale() {
+      const viewport=$('orbitViewport');
+      const frame=$('orbitFrame');
+      const scene=$('orbitScene');
+      const width=viewport.clientWidth;
+      if (!width) return;
+      const horizontal=width<820;
+      const scale=horizontal?.79:Math.min(1,width/1240);
+      const realWidth=Math.round(1240*scale);
+      frame.style.width=horizontal?`${realWidth}px`:'100%';
+      frame.style.height=`${Math.ceil(1090*scale)}px`;
+      scene.style.transform=`scale(${scale})`;
+      scene.style.left=horizontal?'0px':`${Math.max(0,(width-realWidth)/2)}px`;
+      if (!orbitInitialized && horizontal) {
+        viewport.scrollLeft=Math.max(0,(realWidth-width)/2);
+        orbitInitialized=true;
+      }
+    }
+
+
+    function normalizeScore(v) {
+      if (v === '' || v === null || v === undefined) return '';
+      if (typeof v === 'string' && !/^\d{1,3}$/.test(v)) return '';
+      const n = Number(v);
+      return Number.isInteger(n) && n >= 0 && n <= 999 ? String(n) : '';
+    }
+    function getGameState(m) {
+      const filled = m.a !== '' && m.b !== '';
+      const same = m.home === m.away;
+      const tied = filled && Number(m.a) === Number(m.b);
+      return { valid: filled && !same && !tied, invalid: filled && (same || tied) };
+    }
+    function completed() { return matches.filter(m => getGameState(m).valid); }
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORE);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed.matches)) return;
+        const saved = new Map(parsed.matches.filter(m => m && typeof m.id === 'string').map(m => [m.id, m]));
+        playoffData = sanitizedPlayoffs(parsed.playoffs);
+        matches = DEFAULT.map(def => {
+          const m = saved.get(def.id);
+          if (!m) return { ...def };
+          return {
+            ...def,
+            home: idCheck.has(m.home) ? m.home : def.home,
+            away: idCheck.has(m.away) ? m.away : def.away,
+            a: normalizeScore(m.a),
+            b: normalizeScore(m.b)
+          };
+        });
+      } catch (e) { storageAvailable = false; }
+    }
+    function save() {
+      try { localStorage.setItem(STORE, JSON.stringify({ version: 2, matches, playoffs: playoffData })); storageAvailable = true; }
+      catch (e) { storageAvailable = false; }
+      $('saveStatus').textContent = storageAvailable ? 'Guardado automático' : 'Guardado no disponible: exportá una copia';
+    }
+    function showToast(message) {
+      const el = $('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+    }
+    function computeStandings() {
+      const stats = Object.fromEntries(TEAMS.map(t => [t.id, {
+        ...t, pj: 0, pg: 0, pp: 0, pf: 0, pc: 0, diff: 0, pts: 0
+      }]));
+      const played = completed();
+      for (const m of played) {
+        const a = Number(m.a), b = Number(m.b);
+        const s1 = stats[m.home], s2 = stats[m.away];
+        s1.pj++; s2.pj++;
+        s1.pf += a; s1.pc += b;
+        s2.pf += b; s2.pc += a;
+        if (a > b) { s1.pg++; s2.pp++; s1.pts += 2; s2.pts += 1; }
+        else { s2.pg++; s1.pp++; s2.pts += 2; s1.pts += 1; }
+      }
+      for (const s of Object.values(stats)) s.diff = s.pf - s.pc;
+
+      const byPts = new Map();
+      for (const s of Object.values(stats)) {
+        if (!byPts.has(s.pts)) byPts.set(s.pts, []);
+        byPts.get(s.pts).push(s);
+      }
+      const result = [];
+      for (const pts of [...byPts.keys()].sort((a, b) => b - a)) {
+        const group = byPts.get(pts);
+        const ids = new Set(group.map(t => t.id));
+        let canUseHeadToHead = group.length > 1;
+        // Exige exactamente un partido completado por cada par de equipos empatados.
+        for (let i = 0; i < group.length; i++) {
+          for (let j = i + 1; j < group.length; j++) {
+            const pair = matches.filter(m => (m.home === group[i].id && m.away === group[j].id) || (m.home === group[j].id && m.away === group[i].id));
+            if (pair.length !== 1 || !getGameState(pair[0]).valid) canUseHeadToHead = false;
+          }
+        }
+        const h2h = Object.fromEntries(group.map(t => [t.id, { pts: 0, pf: 0, pc: 0, diff: 0 }]));
+        if (canUseHeadToHead) {
+          for (const m of played) {
+            if (!ids.has(m.home) || !ids.has(m.away)) continue;
+            const a = Number(m.a), b = Number(m.b);
+            h2h[m.home].pf += a; h2h[m.home].pc += b;
+            h2h[m.away].pf += b; h2h[m.away].pc += a;
+            if (a > b) { h2h[m.home].pts += 2; h2h[m.away].pts += 1; }
+            else { h2h[m.away].pts += 2; h2h[m.home].pts += 1; }
+          }
+          for (const x of Object.values(h2h)) x.diff = x.pf - x.pc;
+        }
+        group.sort((a, b) => {
+          if (canUseHeadToHead) {
+            const x = h2h[a.id], y = h2h[b.id];
+            if (x.pts !== y.pts) return y.pts - x.pts;
+            if (x.diff !== y.diff) return y.diff - x.diff;
+            if (x.pf !== y.pf) return y.pf - x.pf;
+          }
+          if (a.diff !== b.diff) return b.diff - a.diff;
+          if (a.pf !== b.pf) return b.pf - a.pf;
+          if (a.pg !== b.pg) return b.pg - a.pg;
+          return a.name.localeCompare(b.name, 'es');
+        });
+        result.push(...group);
+      }
+      return { stats: result, played: played.length };
+    }
+    function teamLogo(t) {
+      const initials = t.short.split(/[\s().]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      return `<span class="team-logo"><span class="logo-fallback" aria-hidden="true">${initials}</span><img src="${t.logo}" alt="" loading="lazy" decoding="async" onerror="this.remove()" /></span>`;
+    }
+    function renderStandings() {
+      const { stats, played } = computeStandings();
+      $('standingsBody').innerHTML = stats.map((s, i) => {
+        const diff = (s.diff > 0 ? '+' : '') + s.diff;
+        const diffCls = s.diff > 0 ? 'diff-positive' : s.diff < 0 ? 'diff-negative' : 'muted-cell';
+        return `<tr>
+          <td class="position ${i === 0 && played ? 'leader-position' : ''}">${i + 1}</td>
+          <td class="team-name"><div class="team-with-logo">${teamLogo(s)}<span>${s.name}</span></div></td>
+          <td>${s.pj}</td><td>${s.pg}</td><td>${s.pp}</td>
+          <td class="muted-cell">${s.pf}</td><td class="muted-cell">${s.pc}</td>
+          <td class="${diffCls}">${diff}</td><td class="strong-cell">${s.pts}</td>
+        </tr>`;
+      }).join('');
+      $('playedCount').textContent = `${played} / 28`;
+      $('pendingCount').textContent = String(28 - played);
+      $('leaderName').textContent = played ? stats[0].short : '—';
+      $('fixtureProgress').textContent = `${Math.round(100 * played / 28)}%`;
+      $('progressBar').style.width = `${100 * played / 28}%`;
+      renderPlayoffs({ stats, played });
+    }
+    function inspectFixture() {
+      const warnings = [];
+      const pairCount = new Map();
+      for (const m of matches) {
+        const pair = [m.home, m.away].sort().join('|');
+        if (m.home !== m.away) pairCount.set(pair, (pairCount.get(pair) || 0) + 1);
+        else warnings.push('Hay un partido con el mismo equipo en ambos lados.');
+      }
+      const badRounds = [];
+      for (let r = 1; r <= 7; r++) {
+        const ids = matches.filter(m => m.round === r).flatMap(m => [m.home, m.away]);
+        if (new Set(ids).size !== 8) badRounds.push(r);
+      }
+      if (badRounds.length) warnings.push(`Equipos repetidos en la fecha ${badRounds.join(', ')}.`);
+      if (pairCount.size < 28 || [...pairCount.values()].some(n => n > 1)) warnings.push('Hay cruces repetidos o faltantes: el todos contra todos no está completo.');
+      return [...new Set(warnings)];
+    }
+    function renderTabs() {
+      const choices = Array.from({ length: 7 }, (_, i) => i + 1).concat(0);
+      $('roundTabs').innerHTML = choices.map(r => {
+        const count = r ? matches.filter(m => m.round === r && getGameState(m).valid).length : completed().length;
+        return `<button type="button" class="tab ${currentRound === r ? 'active' : ''}" data-round="${r}" aria-pressed="${currentRound === r}">${r ? 'Fecha ' + r : 'Todas'}${r && count === 4 ? ' ✓' : ''}</button>`;
+      }).join('');
+    }
+    function teamOptions(selected) {
+      return TEAMS.map(t => `<option value="${t.id}" ${selected === t.id ? 'selected' : ''}>${t.short}</option>`).join('');
+    }
+    function makeGame(m) {
+      const { valid, invalid } = getGameState(m);
+      const a = teamById[m.home], b = teamById[m.away];
+      const winA = valid && Number(m.a) > Number(m.b);
+      const winB = valid && Number(m.b) > Number(m.a);
+      const fixtureEditor = editing ? `<div class="edit-label">Cambiar equipos de este partido</div><div class="editing-fixture"><select aria-label="Equipo local del partido ${m.id}" data-match="${m.id}" data-team="home">${teamOptions(m.home)}</select><span>VS.</span><select aria-label="Equipo visitante del partido ${m.id}" data-match="${m.id}" data-team="away">${teamOptions(m.away)}</select></div>` : '';
+      const meta = invalid ? 'Resultado no válido: no se permiten empates ni un equipo contra sí mismo.' : valid ? 'Resultado contabilizado' : 'Pendiente de completar';
+      return `<div class="game ${valid ? 'played' : ''} ${invalid ? 'invalid' : ''}" data-game="${m.id}">
+        ${fixtureEditor}
+        <div class="game-line" style="${editing ? 'margin-top:11px' : ''}">
+          <div class="game-team home ${winA ? 'winner' : winB ? 'loser' : ''}">${teamLogo(a)}<span class="game-team-text">${a.short}</span></div>
+          <input class="game-score" type="number" min="0" max="999" step="1" inputmode="numeric" aria-label="Puntos de ${a.name}, fecha ${m.round}" data-match="${m.id}" data-score="a" value="${m.a}" placeholder="—" />
+          <div class="score-sep">:</div>
+          <input class="game-score" type="number" min="0" max="999" step="1" inputmode="numeric" aria-label="Puntos de ${b.name}, fecha ${m.round}" data-match="${m.id}" data-score="b" value="${m.b}" placeholder="—" />
+          <div class="game-team away ${winB ? 'winner' : winA ? 'loser' : ''}">${teamLogo(b)}<span class="game-team-text">${b.short}</span></div>
+        </div>
+        <div class="game-meta">${meta}</div>
+      </div>`;
+    }
+    function renderFixtures() {
+      const rounds = currentRound === 0 ? [1,2,3,4,5,6,7] : [currentRound];
+      $('fixtureContent').innerHTML = rounds.map(r => {
+        const games = matches.filter(m => m.round === r);
+        const n = games.filter(m => getGameState(m).valid).length;
+        return `<div class="round-group"><div class="round-title"><strong>Fecha ${r}</strong><span>${n} de 4 jugados</span></div>${games.map(makeGame).join('')}</div>`;
+      }).join('');
+      const warnings = inspectFixture();
+      const box = $('fixtureWarning');
+      box.classList.toggle('hidden', warnings.length === 0);
+      box.textContent = warnings.length ? 'Revisá el fixture: ' + warnings.join(' ') : '';
+      $('editFixture').classList.toggle('active', editing);
+      $('editFixture').textContent = editing ? 'Terminar edición' : 'Editar cruces';
+      $('fixtureSubtitle').textContent = editing ? 'Modificá los equipos para adaptar el fixture al torneo real.' : 'Elegí una fecha y completá los cuatro partidos.';
+    }
+    function renderAll() { renderStandings(); renderTabs(); renderFixtures(); }
+    function refreshGameRow(m) {
+      const row = document.querySelector(`[data-game="${m.id}"]`);
+      if (!row) return;
+      const state = getGameState(m);
+      row.classList.toggle('played', state.valid);
+      row.classList.toggle('invalid', state.invalid);
+      row.querySelector('.game-meta').textContent = state.invalid ? 'Resultado no válido: no se permiten empates ni un equipo contra sí mismo.' : state.valid ? 'Resultado contabilizado' : 'Pendiente de completar';
+      const home = row.querySelector('.game-team.home'), away = row.querySelector('.game-team.away');
+      home.classList.toggle('winner', state.valid && Number(m.a) > Number(m.b));
+      home.classList.toggle('loser', state.valid && Number(m.a) < Number(m.b));
+      away.classList.toggle('winner', state.valid && Number(m.b) > Number(m.a));
+      away.classList.toggle('loser', state.valid && Number(m.b) < Number(m.a));
+      const group = row.closest('.round-group');
+      if (group) {
+        const count = matches.filter(x => x.round === m.round && getGameState(x).valid).length;
+        group.querySelector('.round-title span').textContent = `${count} de 4 jugados`;
+      }
+    }
+    $('fixtureContent').addEventListener('input', e => {
+      const target = e.target;
+      if (!target.matches('[data-score]')) return;
+      const m = matches.find(x => x.id === target.dataset.match);
+      if (!m) return;
+      m[target.dataset.score] = normalizeScore(target.value);
+      // No reconstruir el partido: así no se pierde el foco mientras se escribe.
+      refreshGameRow(m);
+      renderStandings();
+      renderTabs();
+      save();
+    });
+    $('fixtureContent').addEventListener('change', e => {
+      const target = e.target;
+      if (target.matches('[data-score]')) {
+        const m = matches.find(x => x.id === target.dataset.match);
+        if (m) target.value = m[target.dataset.score];
+        return;
+      }
+      if (!target.matches('[data-team]')) return;
+      const m = matches.find(x => x.id === target.dataset.match);
+      if (!m || !idCheck.has(target.value)) return;
+      m[target.dataset.team] = target.value;
+      // Los resultados pertenecían al cruce anterior: vaciarlos para no atribuirlos a otros equipos.
+      m.a = '';
+      m.b = '';
+      save(); renderAll();
+      showToast('Cruce modificado. Comprobá que cada equipo juegue una vez por fecha.');
+    });
+    $('roundTabs').addEventListener('click', e => {
+      const tab = e.target.closest('[data-round]');
+      if (!tab) return;
+      currentRound = Number(tab.dataset.round);
+      renderTabs(); renderFixtures();
+    });
+    $('jumpPlayoffs').addEventListener('click', () => {
+      $('playoffsTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    $('editFixture').addEventListener('click', () => {
+      editing = !editing; renderFixtures();
+      if (editing) showToast('Fixture de ejemplo: cambiá los cruces según tu calendario real.');
+    });
+    $('resetScores').addEventListener('click', () => {
+      if (!confirm('¿Borrar los resultados de los 28 partidos? Los cruces se conservarán.')) return;
+      for (const m of matches) { m.a = ''; m.b = ''; }
+      save(); renderAll(); showToast('Se borraron los resultados.');
+    });
+    // Edición interactiva de las siete series, independientemente del fixture regular.
+    $('orbitScene').addEventListener('click', e => {
+      const btn=e.target.closest('[data-open-series]');
+      if (!btn) return;
+      selectedSeries=btn.dataset.openSeries;
+      renderPlayoffs(computeStandings());
+      $('seriesWorkspace').scrollIntoView({behavior:'smooth',block:'start'});
+    });
+    $('orbitScene').addEventListener('mouseover', e=>{
+      const node=e.target.closest('[data-focus-series]');
+      if (node) highlightOrbit(node.dataset.focusSeries);
+    });
+    $('orbitScene').addEventListener('mouseout',e=>{
+      const node=e.target.closest('[data-focus-series]');
+      if (node && !node.contains(e.relatedTarget)) highlightOrbit(selectedSeries);
+    });
+    $('orbitScene').addEventListener('focusin',e=>{
+      const node=e.target.closest('[data-focus-series]');
+      if (node) highlightOrbit(node.dataset.focusSeries);
+    });
+    $('orbitScene').addEventListener('focusout',()=>highlightOrbit(selectedSeries));
+    $('seriesSwitcher').addEventListener('click', e=>{
+      const btn=e.target.closest('[data-open-series]');
+      if (!btn) return;
+      selectedSeries=btn.dataset.openSeries;
+      renderPlayoffs(computeStandings());
+    });
+    $('seriesEditor').addEventListener('input',e=>{
+      const target=e.target;
+      if (!target.matches('[data-gameindex]')) return;
+      const id=target.dataset.series;
+      const index=Number(target.dataset.gameindex);
+      const side=target.dataset.side;
+      const o=lastPlayoffState?.[id];
+      if (!o || !o.pair[0] || !o.pair[1] || !Number.isInteger(index) || index<0 || index>2 || !['a','b'].includes(side)) return;
+      const existing=playoffData[id];
+      if (!existing || existing.pair[0]!==o.pair[0] || existing.pair[1]!==o.pair[1]) {
+        playoffData[id]={ pair:o.pair.slice(), games:[0,1,2].map(i=>({...o.games[i]})) };
+      }
+      playoffData[id].games[index][side]=normalizeScore(target.value);
+      save();
+      const standing=computeStandings();
+      const state=derivePlayoffState(standing.stats,standing.played);
+      lastPlayoffState=state;
+      renderOrbit(state); renderSwitcher(state);
+      const current=state[selectedSeries];
+      const wins=$('editorWins');
+      if (wins) wins.innerHTML=`${current.wins.join('–')}<small>VICTORIAS</small>`;
+      const status=$('editorStatus');
+      if (status) status.textContent=seriesSummary(current);
+      for (let i=0;i<3;i++) {
+        const box=document.querySelector(`[data-editor-game="${i}"]`);
+        if (!box) continue;
+        const g=current.games[i];
+        const tied=g.a!=='' && g.b!=='' && +g.a===+g.b;
+        box.classList.toggle('invalid',tied);
+        const cap=box.querySelector('[data-gamecaption]');
+        cap.textContent=tied?'No se admiten empates':gameValid(g)?'Ganó '+teamById[current.pair[+g.a>+g.b?0:1]].short:i===2&&!current.thirdNeeded?'Se habilita si van 1–1':'Pendiente';
+        if (i===2) {
+          box.classList.toggle('unneeded',!current.thirdNeeded);
+          box.querySelectorAll('input').forEach(inp=>inp.disabled=!current.thirdNeeded);
+        }
+      }
+      updateOrbitScale();
+    });
+    $('seriesEditor').addEventListener('change', e=>{
+      const target=e.target;
+      if (!target.matches('[data-gameindex]')) return;
+      const o=lastPlayoffState?.[target.dataset.series];
+      if (o) target.value=o.games[Number(target.dataset.gameindex)][target.dataset.side];
+    });
+    $('seriesEditor').addEventListener('click',e=>{
+      if (!e.target.closest('#resetSeries')) return;
+      const o=lastPlayoffState?.[selectedSeries];
+      if (!o || !o.pair[0] || !o.pair[1]) return;
+      if (!confirm('¿Borrar los resultados de '+PLAYOFF_LABELS[selectedSeries]+'?')) return;
+      delete playoffData[selectedSeries];
+      save(); renderPlayoffs(computeStandings());
+      showToast('Resultados de la serie borrados.');
+    });
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(updateOrbitScale).observe($('orbitViewport'));
+    } else window.addEventListener('resize',updateOrbitScale);
+    $('exportBackup').addEventListener('click', () => {
+      const data = { version: 2, nombre: 'Calculadora de posiciones de básquet + playoffs', exportado: new Date().toISOString(), matches, playoffs: playoffData };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `basquet-resultados-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast('Copia descargada. Guardala para restaurar tus resultados.');
+    });
+    $('importBackup').addEventListener('click', () => $('backupFile').click());
+    $('backupFile').addEventListener('change', async e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        if (!Array.isArray(data.matches) || data.matches.length !== 28) throw new Error('Formato incorrecto');
+        const incoming = new Map(data.matches.map(m => [m.id, m]));
+        if (incoming.size !== 28) throw new Error('Faltan partidos');
+        const fresh = DEFAULT.map(d => {
+          const m = incoming.get(d.id);
+          if (!m || !idCheck.has(m.home) || !idCheck.has(m.away)) throw new Error('Equipo desconocido');
+          return { ...d, home: m.home, away: m.away, a: normalizeScore(m.a), b: normalizeScore(m.b) };
+        });
+        if (!confirm('¿Importar esta copia? Reemplazará los resultados y cruces actuales.')) return;
+        matches = fresh; playoffData = sanitizedPlayoffs(data.playoffs); save(); renderAll(); showToast('Copia importada correctamente, con los playoffs si estaban incluidos.');
+      } catch (err) { alert('No se pudo importar: el archivo no es una copia válida de esta calculadora.'); }
+      finally { e.target.value = ''; }
+    });
+    load();
+    renderAll();
+    save();
+  })();
+  </script>
+</body>
+</html>
