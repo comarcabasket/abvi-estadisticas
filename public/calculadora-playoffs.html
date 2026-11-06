@@ -825,14 +825,17 @@
       ctx.fillText(series.pair[0] && series.pair[1] ? `Serie ${series.wins[0]}–${series.wins[1]}` : 'Mejor de 3',x+w-25,y+32);
       ctx.textAlign='left'; ctx.restore();
     }
-    function drawOrbitCard(ctx, x, y, w, h, title, body, state='') {
+    function drawOrbitCard(ctx, x, y, w, h, title, names, state='') {
       ctx.save(); roundRect(ctx, x-w/2, y-h/2, w, h, 14);
-      ctx.fillStyle = 'rgba(80,25,73,.96)'; ctx.fill();
+      ctx.fillStyle = 'rgba(80,25,73,.97)'; ctx.fill();
       ctx.strokeStyle = 'rgba(209,151,205,.62)'; ctx.lineWidth=1.7;ctx.stroke();
       ctx.textAlign='center';
-      ctx.fillStyle='#eac9e8';ctx.font='900 15px Inter, Segoe UI, sans-serif';ctx.fillText(title,x,y-20);
-      ctx.fillStyle='#fff';ctx.font=`800 ${fitText(ctx,body,w-22,18,12)}px Inter, Segoe UI, sans-serif`;ctx.fillText(body,x,y+5);
-      ctx.fillStyle='#ccaeca';ctx.font='700 13px Inter, Segoe UI, sans-serif';ctx.fillText(state,x,y+27);
+      ctx.fillStyle='#eac9e8';ctx.font='900 14px Inter, Segoe UI, sans-serif';ctx.fillText(title,x,y-32);
+      const first=names[0]||'Por definir',second=names[1]||'Por definir';
+      ctx.fillStyle='#fff';
+      ctx.font=`800 ${fitText(ctx,first,w-16,16,11)}px Inter, Segoe UI, sans-serif`;ctx.fillText(first,x,y-7);
+      ctx.font=`800 ${fitText(ctx,second,w-16,16,11)}px Inter, Segoe UI, sans-serif`;ctx.fillText(second,x,y+12);
+      ctx.fillStyle='#ccaeca';ctx.font='700 13px Inter, Segoe UI, sans-serif';ctx.fillText(state,x,y+34);
       ctx.restore();
     }
     async function downloadOrbitBracket() {
@@ -851,14 +854,15 @@
         ctx.fillStyle='#c8a9c5';ctx.font='600 20px Inter, Segoe UI, sans-serif';ctx.fillText('Cuartos  ·  Semifinales  ·  Final  |  Al mejor de 3',76,210);
         // Original radial distribution in a tall Instagram-friendly layout.
         const sx=.77,sy=.83,ox=62,oy=325;
+        const ORBIT_EXPORT={...ORBIT,S1:{x:390,y:545},S2:{x:850,y:545}};
         const T=p=>({x:ox+p.x*sx,y:oy+p.y*sy});
         ctx.strokeStyle='rgba(208,140,202,.16)';ctx.lineWidth=1.3;
         for(const r of [155,240,322,410]) {ctx.beginPath();ctx.ellipse(540,779,r,r*.86,0,0,Math.PI*2);ctx.stroke();}
         const drawLine=(a,b)=>{const A=T(a),B=T(b);const mx=(A.x+B.x)/2,my=(A.y+B.y)/2;
           ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.quadraticCurveTo(mx-(B.y-A.y)*.08,my+(B.x-A.x)*.08,B.x,B.y);
           ctx.strokeStyle='rgba(216,155,212,.56)';ctx.lineWidth=2.3;ctx.stroke();};
-        SEED_POSITIONS.forEach((p,i)=>drawLine(p,ORBIT[SEED_QUARTERS[i]]));
-        SERIES_CONNECTIONS.forEach(([a,b])=>drawLine(ORBIT[a],ORBIT[b]));
+        SEED_POSITIONS.forEach((p,i)=>drawLine(p,ORBIT_EXPORT[SEED_QUARTERS[i]]));
+        SERIES_CONNECTIONS.forEach(([a,b])=>drawLine(ORBIT_EXPORT[a],ORBIT_EXPORT[b]));
         for(let i=0;i<8;i++) {
           const seed=SEED_NUMBERS[i],team=state.seeds[seed-1],pos=T(SEED_POSITIONS[i]);
           ctx.save();ctx.beginPath();ctx.arc(pos.x,pos.y,39,0,Math.PI*2);
@@ -873,10 +877,10 @@
           ctx.fillText(team?team.short:'Por definir',pos.x,pos.y+64);ctx.restore();
         }
         for (const id of ['Q1','Q2','Q3','Q4','S1','S2']) {
-          const o=state[id],pos=T(ORBIT[id]),names=o.pair.map(v=>v?teamById[v].short:'Por definir');
-          drawOrbitCard(ctx,pos.x,pos.y,id.startsWith('Q')?152:160,92,id.startsWith('Q')?'CUARTOS': 'SEMIFINAL',names[0]+' / '+names[1],o.pair.every(Boolean)?`${o.wins[0]} – ${o.wins[1]}`:'A definir');
+          const o=state[id],pos=T(ORBIT_EXPORT[id]),names=o.pair.map(v=>v?teamById[v].short:'Por definir');
+          drawOrbitCard(ctx,pos.x,pos.y,id.startsWith('Q')?165:137,105,id.startsWith('Q')?'CUARTOS': 'SEMIFINAL',names,o.pair.every(Boolean)?`${o.wins[0]} – ${o.wins[1]}`:'A definir');
         }
-        const f=state.F,pos=T(ORBIT.F);
+        const f=state.F,pos=T(ORBIT_EXPORT.F);
         ctx.save();ctx.beginPath();ctx.arc(pos.x,pos.y,80,0,Math.PI*2);
         ctx.fillStyle='#3c103a';ctx.fill();ctx.strokeStyle='#f0addc';ctx.lineWidth=3;ctx.stroke();
         ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='900 34px sans-serif';ctx.fillText('🏆',pos.x,pos.y-16);
@@ -1304,5 +1308,4 @@
   })();
   </script>
 </body>
-</html>
 </html>
