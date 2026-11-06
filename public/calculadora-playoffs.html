@@ -47,6 +47,10 @@
     .btn:hover { border-color: #b6a4b6; background: #fcf9fc; }
     .btn-playoffs { background: var(--purple); color: #fff; border-color: var(--purple); }
     .btn-playoffs:hover { background: #511049; border-color: #511049; }
+    .btn-download { background: #f5ebf2; color: var(--purple); border-color: #c9a4c2; }
+    .btn-download:hover { background: #efe0eb; border-color: #a86f9d; }
+    .btn-download:disabled { opacity: .65; cursor: wait; }
+    .playoffs-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .btn:focus-visible, .tab:focus-visible { outline: 3px solid #b467a6; outline-offset: 2px; }
     .btn-danger { color: #983444; }
     .btn.active { background: #f5ebf2; border-color: #ae7ca5; color: var(--purple); }
@@ -314,7 +318,11 @@
           <h2 id="playoffsTitle">Camino al campeonato</h2>
           <p class="panel-subtitle">Ocho equipos. Cuartos, semifinales y final al mejor de tres partidos.</p>
         </div>
-        <span class="round-badge" id="playoffsStatus">Proyección</span>
+        <div class="playoffs-meta">
+          <span class="round-badge" id="playoffsStatus">Proyección</span>
+          <button class="btn btn-download" id="downloadPlayoffs" type="button">Descargar placa 3:4</button>
+          <button class="btn btn-download" id="downloadOrbit" type="button">Descargar cuadro circular</button>
+        </div>
       </div>
       <div class="bracket-notice" id="playoffsNotice" role="status"></div>
       <div class="orbit-toolbar">
@@ -668,6 +676,302 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
     }
+    async function loadImageForExport(src) {
+      return new Promise(resolve => {
+        if (!src) return resolve(null);
+        const img = new Image();
+        let settled = false;
+        const done = (value) => { if (!settled) { settled = true; resolve(value); } };
+        const timeout = setTimeout(() => done(null), 1200);
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { clearTimeout(timeout); done(img); };
+        img.onerror = () => { clearTimeout(timeout); done(null); };
+        img.src = src;
+      });
+    }
+    function roundRect(ctx, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+    function fitText(ctx, text, maxWidth, baseSize, minSize=16) {
+      let size = baseSize;
+      while (size > minSize) {
+        ctx.font = `800 ${size}px Inter, Segoe UI, sans-serif`;
+        if (ctx.measureText(text).width <= maxWidth) return size;
+        size -= 1;
+      }
+      return minSize;
+    }
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+      const words = String(text || '').split(/\s+/).filter(Boolean);
+      const lines = [];
+      let current = '';
+      for (const word of words) {
+        const test = current ? current + ' ' + word : word;
+        if (ctx.measureText(test).width <= maxWidth || !current) current = test;
+        else { lines.push(current); current = word; }
+      }
+      if (current) lines.push(current);
+      const finalLines = lines.slice(0, maxLines);
+      if (lines.length > maxLines && finalLines.length) {
+        let last = finalLines[finalLines.length - 1];
+        while (last.length > 1 && ctx.measureText(last + '…').width > maxWidth) last = last.slice(0, -1);
+        finalLines[finalLines.length - 1] = last + '…';
+      }
+      finalLines.forEach((line, i) => ctx.fillText(line, x, y + i * lineHeight));
+    }
+    async function drawTeamExport(ctx, teamId, seed, x, y, w, h, align='left') {
+      const team = teamId ? teamById[teamId] : null;
+      ctx.save();
+      roundRect(ctx, x, y, w, h, 22);
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#d7bdd5';
+      ctx.font = '700 18px Inter, Segoe UI, sans-serif';
+      const seedText = seed ? `${seed}º` : '—';
+      ctx.fillText(seedText, x + 18, y + 31);
+      const logoSize = 52;
+      const logoX = x + 18;
+      const logoY = y + 38;
+      ctx.beginPath();
+      ctx.arc(logoX + logoSize/2, logoY + logoSize/2, logoSize/2, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fill();
+      if (team) {
+        const img = await loadImageForExport(team.logo);
+        if (img) {
+          const ratio = Math.min(logoSize / img.width, logoSize / img.height);
+          const dw = img.width * ratio, dh = img.height * ratio;
+          ctx.drawImage(img, logoX + (logoSize-dw)/2, logoY + (logoSize-dh)/2, dw, dh);
+        } else {
+          ctx.fillStyle = '#f7e3f8';
+          ctx.font = '800 17px Inter, Segoe UI, sans-serif';
+          const initials = team.short.split(/[\s().]+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+          ctx.textAlign='center'; ctx.fillText(initials, logoX + logoSize/2, logoY + 33); ctx.textAlign='left';
+        }
+      } else {
+        ctx.fillStyle = '#f7e3f8';
+        ctx.font = '700 16px Inter, Segoe UI, sans-serif';
+        ctx.fillText('?', logoX + 22, logoY + 34);
+      }
+      ctx.fillStyle = '#ffffff';
+      const textX = x + 86;
+      const textY = y + 62;
+      const fontSize = fitText(ctx, team ? team.short : 'Por definir', w - 104, 23, 16);
+      ctx.font = `800 ${fontSize}px Inter, Segoe UI, sans-serif`;
+      wrapText(ctx, team ? team.short : 'Por definir', textX, textY, w - 104, fontSize + 5, 2);
+      ctx.restore();
+    }
+    async function drawSeriesExport(ctx, series, title, x, y, w, h, seeds=[]) {
+      ctx.save();
+      roundRect(ctx, x, y, w, h, 28);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(186,112,170,0.38)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#e8cdec';
+      ctx.font = '900 18px Inter, Segoe UI, sans-serif';
+      ctx.fillText(title.toUpperCase(), x + 22, y + 32);
+      const [a,b] = series.pair;
+      await drawTeamExport(ctx, a, seeds[0], x + 18, y + 48, w - 36, 107);
+      await drawTeamExport(ctx, b, seeds[1], x + 18, y + 162, w - 36, 107);
+      ctx.fillStyle = '#bfa8be';
+      ctx.font = '700 22px Inter, Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('VS', x + w/2, y + 161);
+      ctx.textAlign = 'left';
+      const wins = series.pair[0] && series.pair[1] ? `${series.wins[0]} - ${series.wins[1]}` : '—';
+      roundRect(ctx, x + 18, y + h - 60, w - 36, 42, 16);
+      ctx.fillStyle = 'rgba(48,0,43,0.55)';
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '800 18px Inter, Segoe UI, sans-serif';
+      ctx.fillText('Serie', x + 32, y + h - 33);
+      ctx.textAlign='right';
+      ctx.fillText(wins, x + w - 34, y + h - 33);
+      ctx.textAlign='left';
+      ctx.restore();
+    }
+    function drawCompactSeriesExport(ctx, series, title, x, y, w, h) {
+      ctx.save();
+      roundRect(ctx, x, y, w, h, 22);
+      ctx.fillStyle = 'rgba(255,255,255,0.065)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(186,112,170,0.4)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#e8cdec'; ctx.font = '900 18px Inter, Segoe UI, sans-serif';
+      ctx.fillText(title.toUpperCase(), x + 22, y + 32);
+      const names = series.pair.map(id => id ? teamById[id].short : 'Por definir');
+      const textWidth = w - 105;
+      for (let i=0; i<2; i++) {
+        const yy = y + 79 + i * 51;
+        roundRect(ctx, x+18, yy-31, w-36, 43, 10);
+        ctx.fillStyle = 'rgba(255,255,255,0.065)'; ctx.fill();
+        ctx.fillStyle = '#f8ecf7';
+        const f=fitText(ctx,names[i],textWidth,22,16);
+        ctx.font = `800 ${f}px Inter, Segoe UI, sans-serif`;
+        ctx.fillText(names[i],x+35,yy);
+      }
+      ctx.fillStyle = '#d3adcd'; ctx.font = '700 17px Inter, Segoe UI, sans-serif';
+      ctx.textAlign='right';
+      ctx.fillText(series.pair[0] && series.pair[1] ? `Serie ${series.wins[0]}–${series.wins[1]}` : 'Mejor de 3',x+w-25,y+32);
+      ctx.textAlign='left'; ctx.restore();
+    }
+    function drawOrbitCard(ctx, x, y, w, h, title, body, state='') {
+      ctx.save(); roundRect(ctx, x-w/2, y-h/2, w, h, 14);
+      ctx.fillStyle = 'rgba(80,25,73,.96)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(209,151,205,.62)'; ctx.lineWidth=1.7;ctx.stroke();
+      ctx.textAlign='center';
+      ctx.fillStyle='#eac9e8';ctx.font='900 15px Inter, Segoe UI, sans-serif';ctx.fillText(title,x,y-20);
+      ctx.fillStyle='#fff';ctx.font=`800 ${fitText(ctx,body,w-22,18,12)}px Inter, Segoe UI, sans-serif`;ctx.fillText(body,x,y+5);
+      ctx.fillStyle='#ccaeca';ctx.font='700 13px Inter, Segoe UI, sans-serif';ctx.fillText(state,x,y+27);
+      ctx.restore();
+    }
+    async function downloadOrbitBracket() {
+      const btn=$('downloadOrbit');
+      if (!btn) return;
+      const old=btn.textContent; btn.disabled=true;btn.textContent='Generando cuadro…';
+      try {
+        const state=lastPlayoffState||derivePlayoffState(computeStandings().stats,computeStandings().played);
+        const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1440;
+        const ctx=canvas.getContext('2d');
+        const grd=ctx.createLinearGradient(0,0,1080,1440);
+        grd.addColorStop(0,'#180417');grd.addColorStop(.65,'#36002e');grd.addColorStop(1,'#1f071d');
+        ctx.fillStyle=grd;ctx.fillRect(0,0,1080,1440);
+        ctx.fillStyle='#dfc4dc';ctx.font='800 24px Inter, Segoe UI, sans-serif';ctx.fillText('COMARCA BASKET',76,93);
+        ctx.fillStyle='#fff';ctx.font='900 46px Inter, Segoe UI, sans-serif';ctx.fillText('Playoffs - Clausura ABVI 2026',76,161);
+        ctx.fillStyle='#c8a9c5';ctx.font='600 20px Inter, Segoe UI, sans-serif';ctx.fillText('Cuartos  ·  Semifinales  ·  Final  |  Al mejor de 3',76,210);
+        // Original radial distribution in a tall Instagram-friendly layout.
+        const sx=.77,sy=.83,ox=62,oy=325;
+        const T=p=>({x:ox+p.x*sx,y:oy+p.y*sy});
+        ctx.strokeStyle='rgba(208,140,202,.16)';ctx.lineWidth=1.3;
+        for(const r of [155,240,322,410]) {ctx.beginPath();ctx.ellipse(540,779,r,r*.86,0,0,Math.PI*2);ctx.stroke();}
+        const drawLine=(a,b)=>{const A=T(a),B=T(b);const mx=(A.x+B.x)/2,my=(A.y+B.y)/2;
+          ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.quadraticCurveTo(mx-(B.y-A.y)*.08,my+(B.x-A.x)*.08,B.x,B.y);
+          ctx.strokeStyle='rgba(216,155,212,.56)';ctx.lineWidth=2.3;ctx.stroke();};
+        SEED_POSITIONS.forEach((p,i)=>drawLine(p,ORBIT[SEED_QUARTERS[i]]));
+        SERIES_CONNECTIONS.forEach(([a,b])=>drawLine(ORBIT[a],ORBIT[b]));
+        for(let i=0;i<8;i++) {
+          const seed=SEED_NUMBERS[i],team=state.seeds[seed-1],pos=T(SEED_POSITIONS[i]);
+          ctx.save();ctx.beginPath();ctx.arc(pos.x,pos.y,39,0,Math.PI*2);
+          ctx.fillStyle='#4b1846';ctx.fill();ctx.strokeStyle='#c78abd';ctx.lineWidth=2;ctx.stroke();
+          if(team){const img=await loadImageForExport(team.logo);
+            if(img){const ratio=Math.min(59/img.width,59/img.height);const w=img.width*ratio,h=img.height*ratio;
+              ctx.drawImage(img,pos.x-w/2,pos.y-h/2,w,h);}
+            else{ctx.fillStyle='#fff';ctx.textAlign='center';ctx.font='800 15px Inter, Segoe UI, sans-serif';ctx.fillText(team.short.slice(0,3).toUpperCase(),pos.x,pos.y+5);}}
+          ctx.font='800 17px Inter, Segoe UI, sans-serif';ctx.textAlign='center';ctx.fillStyle='#f0d9ec';
+          ctx.fillText(`${seed}º`,pos.x,pos.y-52);
+          ctx.font=`800 ${fitText(ctx,team?team.short:'Por definir',154,17,12)}px Inter, Segoe UI, sans-serif`;
+          ctx.fillText(team?team.short:'Por definir',pos.x,pos.y+64);ctx.restore();
+        }
+        for (const id of ['Q1','Q2','Q3','Q4','S1','S2']) {
+          const o=state[id],pos=T(ORBIT[id]),names=o.pair.map(v=>v?teamById[v].short:'Por definir');
+          drawOrbitCard(ctx,pos.x,pos.y,id.startsWith('Q')?152:160,92,id.startsWith('Q')?'CUARTOS': 'SEMIFINAL',names[0]+' / '+names[1],o.pair.every(Boolean)?`${o.wins[0]} – ${o.wins[1]}`:'A definir');
+        }
+        const f=state.F,pos=T(ORBIT.F);
+        ctx.save();ctx.beginPath();ctx.arc(pos.x,pos.y,80,0,Math.PI*2);
+        ctx.fillStyle='#3c103a';ctx.fill();ctx.strokeStyle='#f0addc';ctx.lineWidth=3;ctx.stroke();
+        ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='900 34px sans-serif';ctx.fillText('🏆',pos.x,pos.y-16);
+        ctx.font='900 17px sans-serif';ctx.fillText(f.winner?'CAMPEÓN':'GRAN FINAL',pos.x,pos.y+13);
+        ctx.font='800 14px sans-serif';ctx.fillStyle='#ecd1e9';
+        ctx.fillText(f.winner?teamById[f.winner].short:'Mejor de 3',pos.x,pos.y+36);ctx.restore();
+        const link=document.createElement('a');link.download='comarca-basket-cuadro-circular-3x4.png';link.href=canvas.toDataURL('image/png');document.body.appendChild(link);link.click();link.remove();
+        showToast('Cuadro circular descargado en PNG 3:4.');
+      } catch(error) {console.error(error);showToast('No se pudo descargar el cuadro circular.');}
+      finally{btn.disabled=false;btn.textContent=old;}
+    }
+    async function downloadPlayoffBracket() {
+      const btn = $('downloadPlayoffs');
+      const previousText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Generando 3:4…';
+      try {
+        const state = lastPlayoffState || derivePlayoffState(computeStandings().stats, computeStandings().played);
+        const W = 1080, H = 1440;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        const grad = ctx.createLinearGradient(0,0,W,H);
+        grad.addColorStop(0,'#150814');
+        grad.addColorStop(0.55,'#30002b');
+        grad.addColorStop(1,'#4b1042');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0,0,W,H);
+        for (let i=0;i<18;i++) {
+          ctx.beginPath();
+          const r = 30 + i*28;
+          ctx.strokeStyle = `rgba(255,255,255,${i<3?0.06:0.028})`;
+          ctx.lineWidth = 1.2;
+          ctx.arc(W/2, H/2 + 130, r, 0, Math.PI*2);
+          ctx.stroke();
+        }
+        ctx.fillStyle = '#e7d8e4';
+        ctx.font = '800 24px Inter, Segoe UI, sans-serif';
+        ctx.fillText('COMARCA BASKET · PLAYOFFS', 74, 76);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 58px Inter, Segoe UI, sans-serif';
+        ctx.font = '900 48px Inter, Segoe UI, sans-serif';
+        ctx.fillText('Playoffs - Clausura ABVI 2026', 72, 140);
+        ctx.fillStyle = '#d9bfd3';
+        ctx.font = '600 24px Inter, Segoe UI, sans-serif';
+        ctx.fillText('Cuartos, semifinales y final · series al mejor de 3', 74, 180);
+        // column labels
+        const leftX = 72, rightX = 566, cardW = 442, qH = 340;
+        await drawSeriesExport(ctx, state.Q1, 'Cuartos 1', leftX, 220, cardW, qH, [1,8]);
+        await drawSeriesExport(ctx, state.Q2, 'Cuartos 2', leftX, 580, cardW, qH, [4,5]);
+        await drawSeriesExport(ctx, state.Q3, 'Cuartos 3', rightX, 220, cardW, qH, [2,7]);
+        await drawSeriesExport(ctx, state.Q4, 'Cuartos 4', rightX, 580, cardW, qH, [3,6]);
+        drawCompactSeriesExport(ctx, state.S1, 'Semifinal A', leftX, 946, 442, 185);
+        drawCompactSeriesExport(ctx, state.S2, 'Semifinal B', rightX, 946, 442, 185);
+        // final / champion strip
+        roundRect(ctx, 196, 1170, 688, 185, 28);
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#eed9f0';
+        ctx.font = '900 22px Inter, Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('GRAN FINAL', 540, 1211);
+        const finalTeams = state.F.pair.map(id => id ? teamById[id].short : 'Por definir');
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 34px Inter, Segoe UI, sans-serif';
+        ctx.font = `900 ${fitText(ctx, finalTeams[0] + '  VS  ' + finalTeams[1], 620, 32, 20)}px Inter, Segoe UI, sans-serif`;
+        ctx.fillText(finalTeams[0] + '  VS  ' + finalTeams[1], 540, 1265);
+        ctx.fillStyle = '#dcbede';
+        ctx.font = '700 22px Inter, Segoe UI, sans-serif';
+        const finalScore = state.F.pair[0] && state.F.pair[1] ? `${state.F.wins[0]} - ${state.F.wins[1]}` : '—';
+        ctx.fillText('Serie: ' + finalScore, 540, 1317);
+        if (state.F.winner) {
+          ctx.fillStyle = '#f7eb98';
+          ctx.font = '900 26px Inter, Segoe UI, sans-serif';
+          ctx.fillText('Campeón: ' + teamById[state.F.winner].name, 540, 1342);
+        }
+        ctx.textAlign = 'left';
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = `comarca-basket-cuadro-playoffs-ig-${new Date().toISOString().slice(0,10)}.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        showToast('Se descargó la imagen 3:4 para Instagram.');
+      } catch (error) {
+        console.error(error);
+        showToast('No se pudo generar la imagen 3:4 del cuadro.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = previousText;
+      }
+    }
     function computeStandings() {
       const stats = Object.fromEntries(TEAMS.map(t => [t.id, {
         ...t, pj: 0, pg: 0, pp: 0, pf: 0, pc: 0, diff: 0, pts: 0
@@ -731,7 +1035,7 @@
     }
     function teamLogo(t) {
       const initials = t.short.split(/[\s().]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-      return `<span class="team-logo"><span class="logo-fallback" aria-hidden="true">${initials}</span><img src="${t.logo}" alt="" loading="lazy" decoding="async" onerror="this.remove()" /></span>`;
+      return `<span class="team-logo"><span class="logo-fallback" aria-hidden="true">${initials}</span><img src="${t.logo}" alt="" loading="lazy" decoding="async" crossorigin="anonymous" onerror="this.remove()" /></span>`;
     }
     function renderStandings() {
       const { stats, played } = computeStandings();
@@ -871,6 +1175,8 @@
     $('jumpPlayoffs').addEventListener('click', () => {
       $('playoffsTitle').scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
+    $('downloadPlayoffs').addEventListener('click', downloadPlayoffBracket);
+    $('downloadOrbit').addEventListener('click', downloadOrbitBracket);
     $('editFixture').addEventListener('click', () => {
       editing = !editing; renderFixtures();
       if (editing) showToast('Fixture de ejemplo: cambiá los cruces según tu calendario real.');
@@ -998,4 +1304,5 @@
   })();
   </script>
 </body>
+</html>
 </html>
